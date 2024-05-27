@@ -2,7 +2,7 @@
 
 ## Installation
 
-1. 
+1. git clone
 2. Installiere Python, Pip
 3. führe auf der Komandozeile aus:`pip install requests`
 4. Kopiere die Datei "sample.config.py" nach "config.py" und trage dort die Daten zu deinen Nextcloudinstanzen ein
