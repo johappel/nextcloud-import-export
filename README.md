@@ -2,12 +2,14 @@
 
 ## Installation
 
-1. git clone
-2. Installiere Python, Pip
-3. führe auf der Komandozeile aus:`pip install requests`
+1. Download https://github.com/johappel/nextcloud-import-export/archive/refs/heads/main.zip 
+   oder auf der Komandozeile git clone https://github.com/johappel/nextcloud-import-export.git
+2. Gehe in das Verzeichnis  nextcloud-import-export (cd  nextcloud-import-export)
+3. Führe auf der Komandozeile aus:`pip install requests`
 4. Kopiere die Datei "sample.config.py" nach "config.py" und trage dort die Daten zu deinen Nextcloudinstanzen ein
 
 
+## Verwendung
 Um ein bestimmtes Deck auf eine andfere Nextcloud Instanz zu kopieren gibst du auf der Komandozeile an:
 
 ```python
