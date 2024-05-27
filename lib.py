@@ -1,3 +1,7 @@
+# thanks to the awesome work of @svbergerem
+# -> svbergerem/nextcloud-deck-export-import.py
+# https://gist.github.com/svbergerem/5914d7f87764901aefddba125af99938
+
 import requests
 import config
 
