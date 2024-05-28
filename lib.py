@@ -1,9 +1,6 @@
-# thanks to the awesome work of @svbergerem
-# -> svbergerem/nextcloud-deck-export-import.py
-# https://gist.github.com/svbergerem/5914d7f87764901aefddba125af99938
-
 import requests
 import config
+import base64
 
 urlFrom = config.urlFrom
 authFrom = config.authFrom
@@ -11,123 +8,66 @@ authFrom = config.authFrom
 urlTo = config.urlTo
 authTo = config.authTo
 
-
 headers = {'OCS-APIRequest': 'true', 'Content-Type': 'application/json'}
 
-def getBoards():
-    response = requests.get(
-            f'{urlFrom}/index.php/apps/deck/api/v1.0/boards',
-            auth=authFrom,
-            headers=headers)
+def make_request(method, endpoint, from_to='from', json=None):
+    if from_to == 'from':
+        url = urlFrom
+        auth = authFrom
+    else:  # from_to == 'to'
+        url = urlTo
+        auth = authTo
+
+    response = requests.request(method, f'{url}{endpoint}', auth=auth, headers=headers, json=json)
     response.raise_for_status()
     return response.json()
 
-def getBoardDetails(boardId):
-    response = requests.get(
-            f'{urlFrom}/index.php/apps/deck/api/v1.0/boards/{boardId}',
-            auth=authFrom,
-            headers=headers)
-    response.raise_for_status()
-    return response.json()
+def getBoards(from_to='from'):
+    boards = make_request('GET', '/index.php/apps/deck/api/v1.0/boards', from_to)
+    return [board for board in boards if 0 == board['deletedAt']]
 
-def getStacks(boardId):
-    response = requests.get(
-            f'{urlFrom}/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks',
-            auth=authFrom,
-            headers=headers)
-    response.raise_for_status()
-    return response.json()
+def getBoardDetails(boardId, from_to='from'):
+    return make_request('GET', f'/index.php/apps/deck/api/v1.0/boards/{boardId}', from_to)
 
-def getStacksArchived(boardId):
-    response = requests.get(
-            f'{urlFrom}/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/archived',
-            auth=authFrom,
-            headers=headers)
-    response.raise_for_status()
-    return response.json()
+def getStacks(boardId, from_to='from'):
+    return make_request('GET', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks', from_to)
+
+def getStacksArchived(boardId, from_to='from'):
+    return make_request('GET', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/archived', from_to)
 
 def createBoard(title, color):
-    response = requests.post(
-            f'{urlTo}/index.php/apps/deck/api/v1.0/boards',
-            auth=authTo,
-            json={
-                'title': title,
-                'color': color
-            },
-            headers=headers)
-    response.raise_for_status()
-    board = response.json()
+    board = make_request('POST', '/index.php/apps/deck/api/v1.0/boards', 'to', json={'title': title, 'color': color})
     boardId = board['id']
     # remove all default labels
     for label in board['labels']:
         labelId = label['id']
-        response = requests.delete(
-            f'{urlTo}/index.php/apps/deck/api/v1.0/boards/{boardId}/labels/{labelId}',
-            auth=authTo,
-            headers=headers)
-        response.raise_for_status()
+        make_request('DELETE', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/labels/{labelId}', 'to')
     return board
 
 def createLabel(title, color, boardId):
-    response = requests.post(
-            f'{urlTo}/index.php/apps/deck/api/v1.0/boards/{boardId}/labels',
-            auth=authTo,
-            json={
-                'title': title,
-                'color': color
-            },
-            headers=headers)
-    response.raise_for_status()
-    return response.json()
+    return make_request('POST', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/labels', 'to', json={'title': title, 'color': color})
 
 def createStack(title, order, boardId):
-    response = requests.post(
-            f'{urlTo}/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks',
-            auth=authTo,
-            json={
-                'title': title,
-                'order': order
-            },
-            headers=headers)
-    response.raise_for_status()
-    return response.json()
+    return make_request('POST', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks', 'to', json={'title': title, 'order': order})
 
 def createCard(title, ctype, order, description, duedate, boardId, stackId):
-    response = requests.post(
-            f'{urlTo}/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/{stackId}/cards',
-            auth=authTo,
-            json={
-                'title': title,
-                'type': ctype,
-                'order': order,
-                'description': description,
-                'duedate': duedate
-            },
-            headers=headers)
-    response.raise_for_status()
-    return response.json()
+    try:
+        return make_request('POST', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/{stackId}/cards', 'to', 
+                            json={'title': title, 'type': ctype, 'order': order, 'description': description, 'duedate': duedate})
+    except requests.exceptions.HTTPError as e:
+        print(f"Error creating card: {e}")
+        print(f"Response: {e.response.text}")
+        raise
 
 def assignLabel(labelId, cardId, boardId, stackId):
-    response = requests.put(
-            f'{urlTo}/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/{stackId}/cards/{cardId}/assignLabel',
-            auth=authTo,
-            json={
-                'labelId': labelId
-            },
-            headers=headers)
-    response.raise_for_status()
+    make_request('PUT', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/{stackId}/cards/{cardId}/assignLabel', 'to', json={'labelId': labelId})
 
 def archiveCard(card, boardId, stackId):
-    cardId = card['id']
     card['archived'] = True
-    response = requests.put(
-            f'{urlTo}/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/{stackId}/cards/{cardId}',
-            auth=authTo,
-            json=card,
-            headers=headers)
-    response.raise_for_status()
+    make_request('PUT', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/{stackId}/cards/{card["id"]}', 'to', json=card)
 
 def copyCard(card, boardIdTo, stackIdTo, labelsMap):
+    print(f"Copying card '{card['title']}' to board {boardIdTo}, stack {stackIdTo}")
     createdCard = createCard(
         card['title'],
         card['type'],
@@ -146,4 +86,16 @@ def copyCard(card, boardIdTo, stackIdTo, labelsMap):
     if card['archived']:
         archiveCard(createdCard, boardIdTo, stackIdTo)
 
+# Löschfunktionen auf der Zielinstanz
+def deleteBoard(boardId):
+    make_request('DELETE', f'/index.php/apps/deck/api/v1.0/boards/{boardId}', 'to')
 
+def deleteStacks(boardId):
+    stacks = getStacks(boardId, 'to')
+    for stack in stacks:
+        make_request('DELETE', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/stacks/{stack["id"]}', 'to')
+
+def deleteLabels(boardId):
+    boardDetails = getBoardDetails(boardId, 'to')
+    for label in boardDetails['labels']:
+        make_request('DELETE', f'/index.php/apps/deck/api/v1.0/boards/{boardId}/labels/{label["id"]}', 'to')

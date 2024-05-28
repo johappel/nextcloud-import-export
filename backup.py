@@ -1,4 +1,10 @@
-from .lib import *
+from datetime import datetime
+from lib import *
+
+# datetime object containing current date and time
+now = datetime.now()
+# dd/mm/YY H:M:S
+dt_string = now.strftime("_%Y-%m-%d-%H-%M-%S")
 
 boards = getBoards()
 
@@ -6,9 +12,9 @@ boards = getBoards()
 for board in boards:
     boardIdFrom = board['id']
     # create board
-    createdBoard = createBoard(board['title'], board['color'])
+    createdBoard = createBoard(board['title']+dt_string, board['color'])
     boardIdTo = createdBoard['id']
-    print('Created board', board['title'])
+    print('Created board', board['title'], dt_string)
 
     # create labels
     boardDetails = getBoardDetails(board['id'])
